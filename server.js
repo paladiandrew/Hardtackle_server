@@ -3,6 +3,7 @@ const bodyParser = require("body-parser");
 const multer = require("multer");
 const cors = require("cors");
 const fs = require("fs");
+const https = require("https");
 require("dotenv").config();
 
 const botUrl = process.env.BOT_URL;
@@ -16,10 +17,7 @@ app.use(
     })
 );
 
-const server = app.listen(process.env.PORT, () => {
-    console.log(`Сервер запущен на порте ${process.env.PORT}`);
-});
-
+const server = https.createServer(app);
 const io = require("socket.io")(server, {
     cors: {
         origin: [`${webAppUrl}`, `${botUrl}`],
@@ -580,6 +578,6 @@ function checkAndUpdateRoundStatus() {
     }
 }
 
-const PORT = process.env.PORT || 443;
+const PORT = process.env.PORT || 8443;
 
 server.listen(PORT);
