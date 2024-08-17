@@ -22,7 +22,7 @@ app.use(
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-const server = https.createServer(app);
+const server = https.createServer({}, app);
 
 // Настройка Socket.IO
 const io = require("socket.io")(server, {
@@ -30,7 +30,6 @@ const io = require("socket.io")(server, {
         origin: "*",
         methods: ["GET", "POST"],
     },
-    port: 8443,
     transports: ["websocket", "polling"],
     secure: true,
 });
