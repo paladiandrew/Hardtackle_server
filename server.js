@@ -8,17 +8,31 @@ require("dotenv").config();
 
 const app = express();
 
-app.use(cors());
+// Настройка CORS
+app.use(
+    cors({
+        origin: "*",
+        methods: ["GET", "POST", "PUT", "DELETE"],
+        allowedHeaders: ["Content-Type", "Authorization"],
+        maxAge: 3600,
+    })
+);
 
+// Настройка Body-Parser
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 const server = https.createServer(app);
-const io = require("socket.io")(server, {
+
+// Настройка Socket.IO
+const io = socketio(server, {
     cors: {
         origin: "*",
         methods: ["GET", "POST"],
     },
     port: 8443,
+    transports: ["websocket", "polling"],
+    secure: true,
 });
 let users = [];
 let cornerSectors = [];
