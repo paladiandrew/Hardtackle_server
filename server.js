@@ -7,9 +7,8 @@ const https = require("https");
 require("dotenv").config();
 
 const app = express();
-app.use(bodyParser.json());
 
-// Добавляем заголовок "Access-Control-Allow-Origin" со значением "*"
+// Добавляем middleware для установки заголовка "Access-Control-Allow-Origin"
 app.use((req, res, next) => {
     res.header("Access-Control-Allow-Origin", "*");
     res.header(
@@ -18,6 +17,8 @@ app.use((req, res, next) => {
     );
     next();
 });
+
+app.use(bodyParser.json());
 
 const server = https.createServer(app);
 const io = require("socket.io")(server, {
