@@ -8,14 +8,15 @@ require("dotenv").config();
 
 const app = express();
 
-app.use(
-    cors({
-        origin: "*",
-        methods: ["GET", "POST"],
-        allowedHeaders: ["Content-Type", "Authorization"],
-        maxAge: 3600,
-    })
-);
+app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header(
+        "Access-Control-Allow-Methods",
+        "GET, POST, PUT, DELETE, OPTIONS"
+    );
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    next();
+});
 
 app.use(bodyParser.json());
 
