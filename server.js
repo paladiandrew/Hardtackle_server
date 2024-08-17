@@ -25,7 +25,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 const server = https.createServer(app);
 
 // Настройка Socket.IO
-const io = socketio(server, {
+const io = require("socket.io")(server, {
     cors: {
         origin: "*",
         methods: ["GET", "POST"],
