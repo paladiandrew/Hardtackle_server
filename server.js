@@ -587,6 +587,6 @@ function checkAndUpdateRoundStatus() {
     }
 }
 
-const PORT = process.env.PORT || 8443;
+const PORT = 8443;
 
 server.listen(PORT);
