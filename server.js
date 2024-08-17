@@ -6,25 +6,26 @@ const fs = require("fs");
 const https = require("https");
 require("dotenv").config();
 
-const botUrl = process.env.BOT_URL;
-const webAppUrl = process.env.APP_API;
-
 const app = express();
 app.use(bodyParser.json());
-app.use(
-    cors({
-        origin: [`${webAppUrl}`, `${botUrl}`],
-    })
-);
+
+// Добавляем заголовок "Access-Control-Allow-Origin" со значением "*"
+app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header(
+        "Access-Control-Allow-Headers",
+        "Origin, X-Requested-With, Content-Type, Accept"
+    );
+    next();
+});
 
 const server = https.createServer(app);
 const io = require("socket.io")(server, {
     cors: {
-        origin: [`${webAppUrl}`, `${botUrl}`],
+        origin: "*",
         methods: ["GET", "POST"],
     },
 });
-
 let users = [];
 let cornerSectors = [];
 
