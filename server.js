@@ -8,15 +8,14 @@ require("dotenv").config();
 
 const app = express();
 
-// Добавляем middleware для установки заголовка "Access-Control-Allow-Origin"
-app.use((req, res, next) => {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header(
-        "Access-Control-Allow-Headers",
-        "Origin, X-Requested-With, Content-Type, Accept"
-    );
-    next();
-});
+app.use(
+    cors({
+        origin: "*",
+        methods: ["GET", "POST"],
+        allowedHeaders: ["Content-Type", "Authorization"],
+        maxAge: 3600,
+    })
+);
 
 app.use(bodyParser.json());
 
