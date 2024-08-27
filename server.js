@@ -586,6 +586,6 @@ function checkAndUpdateRoundStatus() {
     }
 }
 
-const PORT = 8443;
+const PORT = 443;
 
 server.listen(PORT);
