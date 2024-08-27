@@ -3,7 +3,7 @@ const bodyParser = require("body-parser");
 const multer = require("multer");
 const cors = require("cors");
 const fs = require("fs");
-const https = require("https");
+const http = require("http");
 require("dotenv").config();
 
 const app = express();
@@ -21,8 +21,7 @@ app.use(
 // Настройка Body-Parser
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-
-const server = https.createServer({}, app);
+const server = http.createServer(app);
 
 // Настройка Socket.IO
 const io = require("socket.io")(server, {
@@ -31,7 +30,6 @@ const io = require("socket.io")(server, {
         methods: ["GET", "POST"],
     },
     transports: ["websocket", "polling"],
-    secure: true,
 });
 let users = [];
 let cornerSectors = [];
@@ -586,6 +584,7 @@ function checkAndUpdateRoundStatus() {
     }
 }
 
-const PORT = 8443;
-
-server.listen(PORT);
+const PORT = 8080; // Можно выбрать любой доступный порт
+server.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
+});
