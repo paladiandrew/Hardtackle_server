@@ -50,7 +50,8 @@ app.post("/api/upload_photo", upload.single("photo"), (req, res) => {
 });
 
 app.get("/api/get_photo", (req, res) => {
-    const filePath = "./uploads/photo.png";
+    const filePath = "./uploads/bg.png";
+    console.log("success");
     fs.readFile(filePath, (err, data) => {
         if (err) {
             res.status(404).send("Фото не найдено");
