@@ -36,6 +36,9 @@ let cornerSectors = [];
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
+app.get("/", (req, res) => {
+    res.send("It`s my server");
+});
 
 app.post("/api/upload_photo", upload.single("photo"), (req, res) => {
     // сохраняем файл на сервере
