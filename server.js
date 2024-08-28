@@ -8,7 +8,6 @@ require("dotenv").config();
 
 const app = express();
 
-// Настройка CORS
 app.use(
     cors({
         origin: "*",
@@ -18,12 +17,10 @@ app.use(
     })
 );
 
-// Настройка Body-Parser
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 const server = http.createServer(app);
 
-// Настройка Socket.IO
 const io = require("socket.io")(server, {
     cors: {
         origin: "*",
@@ -41,7 +38,6 @@ app.get("/", (req, res) => {
 });
 
 app.post("/api/upload_photo", upload.single("photo"), (req, res) => {
-    // сохраняем файл на сервере
     const fileBuffer = req.file.buffer;
     const filePath = "./uploads/" + req.file.originalname;
     fs.writeFileSync(filePath, fileBuffer);
@@ -67,7 +63,6 @@ app.post("/api/cornerSectors", (req, res) => {
     res.sendStatus(200);
 });
 
-// Обработка POST-запроса для загрузки данных
 app.post("/api/data", (req, res) => {
     const data = req.body;
     users = data.map((row, index) => ({
@@ -588,7 +583,7 @@ function checkAndUpdateRoundStatus() {
     }
 }
 
-const PORT = 8080; // Можно выбрать любой доступный порт
+const PORT = process.env.PORT;
 server.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });
