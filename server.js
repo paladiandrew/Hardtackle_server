@@ -2,11 +2,12 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const multer = require("multer");
 const cors = require("cors");
+require("dotenv").config();
 const fs = require("fs");
 const http = require("http");
 
 const app = express();
-
+const PORT = process.env.PORT || 8080;
 app.use(
     cors({
         origin: "*",
@@ -582,7 +583,6 @@ function checkAndUpdateRoundStatus() {
     }
 }
 
-const PORT = process.env.PORT;
 server.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });
