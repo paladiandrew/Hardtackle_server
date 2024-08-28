@@ -223,7 +223,7 @@ app.get("/api/users", (req, res) => {
 app.get("/api/user/:code", (req, res) => {
     const code = req.params.code.toString();
     const user = users.find((user) => user.code === code);
-
+    console.log("success");
     if (user) {
         res.json(user);
     } else {
