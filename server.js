@@ -39,7 +39,7 @@ app.get("/", (req, res) => {
 
 app.post("/api/upload_photo", upload.single("photo"), (req, res) => {
     const fileBuffer = req.file.buffer;
-    const filePath = "./uploads/" + req.file.originalname;
+    const filePath = "./uploads/bg.png";
     fs.writeFileSync(filePath, fileBuffer);
     console.log(`Файл сохранен: ${filePath}`);
     res.send("Файл сохранен!");
@@ -548,9 +548,12 @@ function checkAndUpdateRoundStatus() {
 
             activeCircles.forEach((activeCircle) => {
                 const nextCircleIndex = user.circles.indexOf(activeCircle) + 1;
+                let nextInactiveCircleIndex;
+                let secondInactiveCircle;
                 if (nextCircleIndex < user.circles.length) {
                     const nextCircle = user.circles[nextCircleIndex];
                     if (nextCircle.status === "inactive") {
+                        nextInactiveCircleIndex = nextCircleIndex + 1;
                         nextCircle.status = "active";
                         nextCircle.playerGame.approveState = 1;
                         nextCircle.opponentGame.approveState = 1;
@@ -559,18 +562,20 @@ function checkAndUpdateRoundStatus() {
                     }
                 }
 
-                if (activeCircle.second_circle) {
-                    const secondCircleIndex =
-                        user.circles.indexOf(activeCircle) + 2;
-                    if (secondCircleIndex < user.circles.length) {
-                        const secondCircle = user.circles[secondCircleIndex];
-                        if (secondCircle.status === "inactive") {
-                            secondCircle.status = "active";
-                            secondCircle.playerGame.approveState = 1;
-                            secondCircle.opponentGame.approveState = 1;
-                            secondCircle.playerGame.fishCount = 0;
-                            secondCircle.opponentGame.fishCount = 0;
-                        }
+                if (nextInactiveCircleIndex < user.circles.length) {
+                    secondInactiveCircle =
+                        user.circles[nextInactiveCircleIndex];
+                }
+                if (
+                    secondInactiveCircle &&
+                    secondInactiveCircle.second_circle
+                ) {
+                    if (secondInactiveCircle.status === "inactive") {
+                        secondInactiveCircle.status = "active";
+                        secondInactiveCircle.playerGame.approveState = 1;
+                        secondInactiveCircle.opponentGame.approveState = 1;
+                        secondInactiveCircle.playerGame.fishCount = 0;
+                        secondInactiveCircle.opponentGame.fishCount = 0;
                     }
                 }
             });
