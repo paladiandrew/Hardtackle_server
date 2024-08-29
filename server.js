@@ -78,7 +78,7 @@ app.post("/api/data", (req, res) => {
             return {
                 number: i + 1,
                 status: i === 0 ? "active" : "inactive",
-                index_circle: i,
+                index_circle: i + 1,
                 second_circle: false,
                 playerGame: {
                     approveState: 1,
