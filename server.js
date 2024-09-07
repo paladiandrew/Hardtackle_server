@@ -557,8 +557,8 @@ function checkAndUpdateRoundStatus() {
                         nextCircle.status = "active";
                         nextCircle.playerGame.approveState = 1;
                         nextCircle.opponentGame.approveState = 1;
-                        nextCircle.playerGame.fishCount = 0;
-                        nextCircle.opponentGame.fishCount = 0;
+                        nextCircle.playerGame.fishCount = null;
+                        nextCircle.opponentGame.fishCount = null;
                     }
                 }
 
