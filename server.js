@@ -254,6 +254,22 @@ function adjustUsersAfterCornerSectorsUpdate() {
         circles: [...user.circles],
     }));
 
+    let totalStages = Math.max(
+        0,
+        ...users.map((user) =>
+            user.circles.reduce(
+                (maxIndex, circle) =>
+                    (circle.status === "active" ||
+                        circle.status === "completed" ||
+                        circle.status === "inactive") &&
+                    circle.index_circle > maxIndex
+                        ? circle.index_circle
+                        : maxIndex,
+                0
+            )
+        )
+    );
+
     // 5. Пересоздаем круги с использованием логики из /api/data
     for (let i = startIndex - 1; i < totalStages; i++) {
         let newUsers = users.map((user) => ({ ...user, circles: [] }));
