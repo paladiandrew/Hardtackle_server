@@ -248,14 +248,6 @@ function adjustUsersAfterCornerSectorsUpdate() {
     // 3. Начинаем пересоздавать круги с индекса lastActiveIndex + 1
     let startIndex = lastActiveIndex + 1;
 
-    // Проверяем, есть ли еще этапы для пересоздания
-    const totalStages = baseUsers[0].circles.length;
-    if (startIndex > totalStages) {
-        console.log("Нет этапов для пересоздания.");
-        io.emit("allUsersUpdated", users);
-        return;
-    }
-
     // 4. Инициализация finalNewUsers с уже имеющимися кругами
     let finalNewUsers = users.map((user) => ({
         ...user,
@@ -772,6 +764,15 @@ function checkAndUpdateRoundStatus() {
 app.post("/api/update_player_score", (req, res) => {
     const { stage_number, player_number, new_score } = req.body;
 
+    if (
+        typeof stage_number !== "number" ||
+        typeof player_number !== "number" ||
+        typeof new_score !== "number" ||
+        new_score < 0
+    ) {
+        return res.status(400).json({ message: "Invalid input data" });
+    }
+
     const userIndex = users.findIndex(
         (user) => user.player_id === player_number
     );
@@ -780,7 +781,6 @@ app.post("/api/update_player_score", (req, res) => {
     }
     const user = users[userIndex];
 
-    // Find all circles for the given stage number
     const circlesToUpdate = user.circles.filter(
         (circle) => circle.index_circle === stage_number
     );
@@ -795,151 +795,113 @@ app.post("/api/update_player_score", (req, res) => {
     circlesToUpdate.forEach((circle) => {
         const isSecondCircle = circle.second_circle;
 
-        // Save previous points and fish count
         const prevPlayerPoints = circle.playerGame.points || 0;
         const prevFishCount = circle.playerGame.fishCount || 0;
 
-        // Update player's fishCount
         circle.playerGame.fishCount = new_score;
 
-        // Get opponent's fishCount
         const opponentFishCount = circle.opponentGame.fishCount || 0;
 
-        // Recalculate points
+        if (circle.status === "completed") {
+            const { newPlayerPoints, newOpponentPoints } = calculatePoints(
+                new_score,
+                opponentFishCount
+            );
+
+            totalPointsDifference += newPlayerPoints - prevPlayerPoints;
+
+            circle.playerGame.points = newPlayerPoints;
+            circle.opponentGame.points = newOpponentPoints;
+
+            totalFishDifference += new_score - prevFishCount;
+
+            const opponentIndex = users.findIndex(
+                (u) => u.player_id === circle.opponentGame.number
+            );
+            if (opponentIndex !== -1) {
+                const opponentUser = users[opponentIndex];
+
+                const opponentCircles = opponentUser.circles.filter(
+                    (c) =>
+                        c.index_circle === stage_number &&
+                        c.opponentGame.number === player_number &&
+                        c.status === "completed"
+                );
+
+                opponentCircles.forEach((opponentCircle) => {
+                    const isOpponentSecondCircle = opponentCircle.second_circle;
+
+                    const prevOpponentPlayerPoints =
+                        opponentCircle.playerGame.points || 0;
+                    const prevOpponentFishCount =
+                        opponentCircle.playerGame.fishCount || 0;
+
+                    opponentCircle.playerGame.fishCount =
+                        opponentCircle.opponentGame.fishCount = new_score;
+
+                    const {
+                        newPlayerPoints: opNewPlayerPoints,
+                        newOpponentPoints: opNewOpponentPoints,
+                    } = calculatePoints(
+                        opponentCircle.playerGame.fishCount,
+                        opponentCircle.opponentGame.fishCount
+                    );
+
+                    if (!isOpponentSecondCircle) {
+                        opponentUser.total_user_points +=
+                            opNewPlayerPoints - prevOpponentPlayerPoints;
+                        opponentUser.total_user_fish +=
+                            opponentCircle.playerGame.fishCount -
+                            prevOpponentFishCount;
+                    }
+                    opponentCircle.playerGame.points = opNewPlayerPoints;
+                    opponentCircle.opponentGame.points = newPlayerPoints;
+                    updateUserTotalPointsInCircles(opponentUser);
+                });
+            }
+        } else {
+            totalFishDifference += new_score - prevFishCount;
+        }
+    });
+    user.total_user_points += totalPointsDifference;
+    user.total_user_fish += totalFishDifference;
+    updateUserTotalPointsInCircles(user);
+    function calculatePoints(playerFish, opponentFish) {
         let newPlayerPoints = 0;
         let newOpponentPoints = 0;
-        const playerFishCount = new_score;
 
-        if (playerFishCount === 0 && opponentFishCount === 0) {
+        if (playerFish === 0 && opponentFish === 0) {
             newPlayerPoints = 1;
             newOpponentPoints = 1;
-        } else if (
-            playerFishCount === opponentFishCount &&
-            playerFishCount > 0
-        ) {
+        } else if (playerFish === opponentFish && playerFish > 0) {
             newPlayerPoints = 2;
             newOpponentPoints = 2;
-        } else if (playerFishCount > opponentFishCount) {
+        } else if (playerFish > opponentFish) {
             newPlayerPoints = 4;
-            newOpponentPoints = opponentFishCount > 0 ? 1 : 0;
+            newOpponentPoints = opponentFish > 0 ? 1 : 0;
         } else {
-            newPlayerPoints = playerFishCount > 0 ? 1 : 0;
+            newPlayerPoints = playerFish > 0 ? 1 : 0;
             newOpponentPoints = 4;
         }
 
-        // Adjust user's total points and fish
-        if (!isSecondCircle) {
-            totalPointsDifference += newPlayerPoints - prevPlayerPoints;
-            totalFishDifference += playerFishCount - prevFishCount;
-        }
+        return { newPlayerPoints, newOpponentPoints };
+    }
 
-        // Update player's circle points
-        circle.playerGame.points = newPlayerPoints;
-
-        // Update opponent's data
-        const opponentIndex = users.findIndex(
-            (u) => u.player_id === circle.opponentGame.number
-        );
-        if (opponentIndex !== -1) {
-            const opponentUser = users[opponentIndex];
-
-            const opponentCircles = opponentUser.circles.filter(
-                (c) =>
-                    c.index_circle === stage_number &&
-                    c.opponentGame.number === player_number
-            );
-
-            opponentCircles.forEach((opponentCircle) => {
-                const isOpponentSecondCircle = opponentCircle.second_circle;
-
-                // Save previous opponent's points and fish count
-                const prevOpponentPlayerPoints =
-                    opponentCircle.playerGame.points || 0;
-                const prevOpponentFishCount =
-                    opponentCircle.playerGame.fishCount || 0;
-
-                // Update opponent's opponentGame fishCount (which is our player's fishCount)
-                opponentCircle.opponentGame.fishCount = playerFishCount;
-
-                // Recalculate opponent's points
-                const opPlayerFishCount =
-                    opponentCircle.playerGame.fishCount || 0;
-                const opOpponentFishCount =
-                    opponentCircle.opponentGame.fishCount || 0;
-
-                let opNewPlayerPoints = 0;
-                let opNewOpponentPoints = 0;
-
-                if (opPlayerFishCount === 0 && opOpponentFishCount === 0) {
-                    opNewPlayerPoints = 1;
-                    opNewOpponentPoints = 1;
-                } else if (
-                    opPlayerFishCount === opOpponentFishCount &&
-                    opPlayerFishCount > 0
-                ) {
-                    opNewPlayerPoints = 2;
-                    opNewOpponentPoints = 2;
-                } else if (opPlayerFishCount > opOpponentFishCount) {
-                    opNewPlayerPoints = 4;
-                    opNewOpponentPoints = opOpponentFishCount > 0 ? 1 : 0;
-                } else {
-                    opNewPlayerPoints = opPlayerFishCount > 0 ? 1 : 0;
-                    opNewOpponentPoints = 4;
-                }
-
-                // Adjust opponent's total points and fish
-                if (!isOpponentSecondCircle) {
-                    opponentUser.total_user_points =
-                        opponentUser.total_user_points -
-                        prevOpponentPlayerPoints +
-                        opNewPlayerPoints;
-                    opponentUser.total_user_fish =
-                        opponentUser.total_user_fish -
-                        prevOpponentFishCount +
-                        opPlayerFishCount;
-                }
-
-                // Update opponent's circle points
-                opponentCircle.playerGame.points = opNewPlayerPoints;
-
-                // Update opponent's opponentGame points (which is our player's points)
-                opponentCircle.opponentGame.points = newPlayerPoints;
-
-                // Immediately update opponent's total_points in all circles
-                updateUserTotalPointsInCircles(opponentUser);
-            });
-        }
-
-        // Update our circle's opponentGame points
-        circle.opponentGame.points = newOpponentPoints;
-    });
-
-    // Adjust user's total points and fish
-    user.total_user_points += totalPointsDifference;
-    user.total_user_fish += totalFishDifference;
-
-    // Immediately update user's total_points in all circles
-    updateUserTotalPointsInCircles(user);
-
-    // Function to update total_points for a given user across all circles
     function updateUserTotalPointsInCircles(updatedUser) {
         const updatedPlayerNumber = updatedUser.player_id;
         const updatedPlayerTotalPoints = updatedUser.total_user_points;
 
-        users.forEach((u) => {
-            u.circles.forEach((circle) => {
-                if (circle.playerGame.number === updatedPlayerNumber) {
-                    circle.playerGame.total_points = updatedPlayerTotalPoints;
-                }
-                if (circle.opponentGame.number === updatedPlayerNumber) {
-                    circle.opponentGame.total_points =
-                        updatedUser.total_user_points;
-                }
-            });
+        updatedUser.circles.forEach((circle) => {
+            if (circle.playerGame.number === updatedPlayerNumber) {
+                circle.playerGame.total_points = updatedPlayerTotalPoints;
+            }
+            if (circle.opponentGame.number === updatedPlayerNumber) {
+                circle.opponentGame.total_points =
+                    updatedUser.total_user_points;
+            }
         });
     }
 
-    // Emit updated users
     io.emit("allUsersUpdated", users);
 
     res.sendStatus(200);
