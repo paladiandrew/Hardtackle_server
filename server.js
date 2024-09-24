@@ -110,7 +110,7 @@ app.post("/api/data", (req, res) => {
             };
         }),
     }));
-    baseUsers = users;
+    baseUsers = [...users];
 
     const usersWithEmptyName = users.filter(
         (user) => user.user_name === "Empty"
