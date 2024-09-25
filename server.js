@@ -233,14 +233,11 @@ function adjustUsersAfterCornerSectorsUpdate() {
     let lastActiveIndex = Math.max(
         0,
         ...users.map((user) =>
-            user.circles.reduce(
-                (maxIndex, circle) =>
-                    (circle.status === "active" ||
-                        circle.status === "completed") &&
-                    circle.index_circle > maxIndex
-                        ? circle.index_circle
-                        : maxIndex,
-                0
+            user.circles.reduce((maxIndex, circle) =>
+                (circle.status === "active" || circle.status === "completed") &&
+                circle.index_circle > maxIndex
+                    ? circle.index_circle
+                    : maxIndex
             )
         )
     );
@@ -253,22 +250,8 @@ function adjustUsersAfterCornerSectorsUpdate() {
         ...user,
         circles: [...user.circles],
     }));
-
-    let totalStages = Math.max(
-        0,
-        ...users.map((user) =>
-            user.circles.reduce(
-                (maxIndex, circle) =>
-                    circle.index_circle > maxIndex
-                        ? circle.index_circle
-                        : maxIndex,
-                0
-            )
-        )
-    );
-
     // 5. Пересоздаем круги с использованием логики из /api/data
-    for (let i = startIndex; i < totalStages; i++) {
+    for (let i = startIndex; i < baseUsers[0].circles.length; i++) {
         let newUsers = users.map((user) => ({ ...user, circles: [] }));
 
         // Создаем новый круг для каждого пользователя
@@ -276,7 +259,7 @@ function adjustUsersAfterCornerSectorsUpdate() {
             const circle = baseUsers[j].circles[i];
             const newCircle = {
                 number: i + 1,
-                status: i === startIndex - 1 ? "active" : "inactive",
+                status: "inactive",
                 index_circle: i + 1,
                 second_circle: false,
                 playerGame: circle.playerGame,
@@ -332,7 +315,7 @@ function adjustUsersAfterCornerSectorsUpdate() {
                         number: i + 1,
                         index_circle: i + 1,
                         second_circle: true,
-                        status: i === startIndex - 1 ? "active" : "inactive",
+                        status: "inactive",
                         playerGame: userNewOpponent.circles[0].playerGame,
                         opponentGame: circle.playerGame,
                     };
@@ -358,10 +341,7 @@ function adjustUsersAfterCornerSectorsUpdate() {
         }
     }
 
-    // 6. Обновляем пользователей
-    for (let i = 0; i < users.length; i++) {
-        users[i].circles = finalNewUsers[i].circles;
-    }
+    users = [...finalNewUsers];
 
     // 7. Отправляем обновленные данные клиентам
     io.emit("allUsersUpdated", users);
@@ -816,9 +796,6 @@ app.post("/api/update_player_score", (req, res) => {
 
         // Обновляем fishCount игрока
         circle.playerGame.fishCount = new_score;
-
-        // **Независимо от статуса, обновляем fishCount оппонента в текущем круге**
-        circle.opponentGame.fishCount = new_score;
 
         const opponentFishCount = circle.opponentGame.fishCount || 0;
 
