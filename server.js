@@ -222,26 +222,30 @@ app.post("/api/data", (req, res) => {
 });
 
 function adjustUsersAfterCornerSectorsUpdate() {
+    let lastActiveIndex = Math.max(
+        0,
+        ...users.map(
+            (user) =>
+                user.circles.reduce((maxIndex, circle) => {
+                    // Проверка, что статус круг правильный и index_circle является числом
+                    if (
+                        (circle.status === "active" ||
+                            circle.status === "completed") &&
+                        typeof circle.index_circle === "number" &&
+                        circle.index_circle > maxIndex
+                    ) {
+                        return circle.index_circle;
+                    }
+                    return maxIndex;
+                }, 0) // Начальное значение аккумулятора
+        )
+    );
     // 1. Удаляем все неактивные круги у пользователей
     users.forEach((user) => {
         user.circles = user.circles.filter(
             (circle) => circle.status !== "inactive"
         );
     });
-
-    // 2. Определяем индекс последнего активного круга
-    let lastActiveIndex = Math.max(
-        0,
-        ...users.map((user) =>
-            user.circles.reduce((maxIndex, circle) =>
-                (circle.status === "active" || circle.status === "completed") &&
-                circle.index_circle > maxIndex
-                    ? circle.index_circle
-                    : maxIndex
-            )
-        )
-    );
-
     // 3. Начинаем пересоздавать круги с индекса lastActiveIndex + 1
     let startIndex = lastActiveIndex + 1;
     console.log(startIndex);
