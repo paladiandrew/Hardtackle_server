@@ -259,9 +259,6 @@ function adjustUsersAfterCornerSectorsUpdate() {
         ...users.map((user) =>
             user.circles.reduce(
                 (maxIndex, circle) =>
-                    (circle.status === "active" ||
-                        circle.status === "completed" ||
-                        circle.status === "inactive") &&
                     circle.index_circle > maxIndex
                         ? circle.index_circle
                         : maxIndex,
@@ -271,7 +268,7 @@ function adjustUsersAfterCornerSectorsUpdate() {
     );
 
     // 5. Пересоздаем круги с использованием логики из /api/data
-    for (let i = startIndex - 1; i < totalStages; i++) {
+    for (let i = startIndex; i < totalStages; i++) {
         let newUsers = users.map((user) => ({ ...user, circles: [] }));
 
         // Создаем новый круг для каждого пользователя
@@ -780,6 +777,7 @@ function checkAndUpdateRoundStatus() {
 app.post("/api/update_player_score", (req, res) => {
     const { stage_number, player_number, new_score } = req.body;
 
+    // Валидация входных данных
     if (
         typeof stage_number !== "number" ||
         typeof player_number !== "number" ||
@@ -789,6 +787,7 @@ app.post("/api/update_player_score", (req, res) => {
         return res.status(400).json({ message: "Invalid input data" });
     }
 
+    // Поиск текущего пользователя
     const userIndex = users.findIndex(
         (user) => user.player_id === player_number
     );
@@ -797,6 +796,7 @@ app.post("/api/update_player_score", (req, res) => {
     }
     const user = users[userIndex];
 
+    // Поиск кругов для обновления
     const circlesToUpdate = user.circles.filter(
         (circle) => circle.index_circle === stage_number
     );
@@ -817,7 +817,7 @@ app.post("/api/update_player_score", (req, res) => {
         // Обновляем fishCount игрока
         circle.playerGame.fishCount = new_score;
 
-        // **Независимо от статуса, обновляем fishCount оппонента**
+        // **Независимо от статуса, обновляем fishCount оппонента в текущем круге**
         circle.opponentGame.fishCount = new_score;
 
         const opponentFishCount = circle.opponentGame.fishCount || 0;
@@ -835,8 +835,10 @@ app.post("/api/update_player_score", (req, res) => {
 
             totalFishDifference += new_score - prevFishCount;
 
+            // Обновляем оппонента
+            const opponentPlayerNumber = circle.opponentGame.number;
             const opponentIndex = users.findIndex(
-                (u) => u.player_id === circle.opponentGame.number
+                (u) => u.player_id === opponentPlayerNumber
             );
             if (opponentIndex !== -1) {
                 const opponentUser = users[opponentIndex];
@@ -848,7 +850,7 @@ app.post("/api/update_player_score", (req, res) => {
                 );
 
                 opponentCircles.forEach((opponentCircle) => {
-                    // **Независимо от статуса, обновляем fishCount оппонента**
+                    // **Обновляем opponentGame.fishCount для круга оппонента**
                     opponentCircle.opponentGame.fishCount = new_score;
 
                     const isOpponentSecondCircle = opponentCircle.second_circle;
@@ -858,6 +860,7 @@ app.post("/api/update_player_score", (req, res) => {
                     const prevOpponentFishCount =
                         opponentCircle.playerGame.fishCount || 0;
 
+                    // Обновляем fishCount оппонента в его кругах
                     opponentCircle.playerGame.fishCount = new_score;
 
                     const {
@@ -884,9 +887,14 @@ app.post("/api/update_player_score", (req, res) => {
             totalFishDifference += new_score - prevFishCount;
         }
     });
+
+    // Обновляем общие очки и рыбу пользователя
     user.total_user_points += totalPointsDifference;
     user.total_user_fish += totalFishDifference;
     updateUserTotalPointsInCircles(user);
+
+    // **Обновляем opponentGame.fishCount у всех оппонентов вне зависимости от статуса круга**
+    updateOpponentsFishCount(stage_number, player_number, new_score);
 
     function calculatePoints(playerFish, opponentFish) {
         let newPlayerPoints = 0;
@@ -924,6 +932,30 @@ app.post("/api/update_player_score", (req, res) => {
         });
     }
 
+    // **Новая функция для обновления opponentGame.fishCount у всех оппонентов**
+    function updateOpponentsFishCount(stage_number, player_number, new_score) {
+        users.forEach((user) => {
+            user.circles.forEach((circle) => {
+                if (
+                    circle.index_circle === stage_number &&
+                    circle.opponentGame.number === player_number
+                ) {
+                    // Обновляем opponentGame.fishCount только
+                    circle.opponentGame.fishCount = new_score;
+
+                    // Дополнительно, если необходимо, можно обновить и другие поля, например points
+                    // Например:
+                    // const { newPlayerPoints, newOpponentPoints } = calculatePoints(
+                    //     circle.playerGame.fishCount,
+                    //     new_score
+                    // );
+                    // circle.opponentGame.points = newOpponentPoints;
+                }
+            });
+        });
+    }
+
+    // Отправляем обновлённые пользователи всем клиентам через WebSocket
     io.emit("allUsersUpdated", users);
 
     res.sendStatus(200);
