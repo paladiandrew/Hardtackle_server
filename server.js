@@ -244,7 +244,8 @@ function adjustUsersAfterCornerSectorsUpdate() {
 
     // 3. Начинаем пересоздавать круги с индекса lastActiveIndex + 1
     let startIndex = lastActiveIndex + 1;
-
+    console.log(startIndex);
+    console.log(baseUsers);
     // 4. Инициализация finalNewUsers с уже имеющимися кругами
     let finalNewUsers = users.map((user) => ({
         ...user,
