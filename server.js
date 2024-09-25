@@ -755,8 +755,8 @@ function checkAndUpdateRoundStatus() {
                         secondInactiveCircle.status = "active";
                         secondInactiveCircle.playerGame.approveState = 1;
                         secondInactiveCircle.opponentGame.approveState = 1;
-                        secondInactiveCircle.playerGame.fishCount = null;
-                        secondInactiveCircle.opponentGame.fishCount = null;
+                        secondInactiveCircle.playerGame.fishCount = "";
+                        secondInactiveCircle.opponentGame.fishCount = "";
                     }
                 }
             });
