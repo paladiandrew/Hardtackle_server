@@ -346,6 +346,16 @@ function adjustUsersAfterCornerSectorsUpdate() {
         }
     }
 
+    finalNewUsers = finalNewUsers.map((user) => {
+        return {
+            ...user,
+            circles: user.circles.map((circle, index) => ({
+                ...circle,
+                number: index + 1,
+            })),
+        };
+    });
+
     users = [...finalNewUsers];
 
     // 7. Отправляем обновленные данные клиентам
