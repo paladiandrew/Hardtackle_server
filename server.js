@@ -814,7 +814,11 @@ app.post("/api/update_player_score", (req, res) => {
         const prevPlayerPoints = circle.playerGame.points || 0;
         const prevFishCount = circle.playerGame.fishCount || 0;
 
+        // Обновляем fishCount игрока
         circle.playerGame.fishCount = new_score;
+
+        // **Независимо от статуса, обновляем fishCount оппонента**
+        circle.opponentGame.fishCount = new_score;
 
         const opponentFishCount = circle.opponentGame.fishCount || 0;
 
@@ -840,11 +844,13 @@ app.post("/api/update_player_score", (req, res) => {
                 const opponentCircles = opponentUser.circles.filter(
                     (c) =>
                         c.index_circle === stage_number &&
-                        c.opponentGame.number === player_number &&
-                        c.status === "completed"
+                        c.opponentGame.number === player_number
                 );
 
                 opponentCircles.forEach((opponentCircle) => {
+                    // **Независимо от статуса, обновляем fishCount оппонента**
+                    opponentCircle.opponentGame.fishCount = new_score;
+
                     const isOpponentSecondCircle = opponentCircle.second_circle;
 
                     const prevOpponentPlayerPoints =
@@ -852,8 +858,7 @@ app.post("/api/update_player_score", (req, res) => {
                     const prevOpponentFishCount =
                         opponentCircle.playerGame.fishCount || 0;
 
-                    opponentCircle.playerGame.fishCount =
-                        opponentCircle.opponentGame.fishCount = new_score;
+                    opponentCircle.playerGame.fishCount = new_score;
 
                     const {
                         newPlayerPoints: opNewPlayerPoints,
@@ -882,6 +887,7 @@ app.post("/api/update_player_score", (req, res) => {
     user.total_user_points += totalPointsDifference;
     user.total_user_fish += totalFishDifference;
     updateUserTotalPointsInCircles(user);
+
     function calculatePoints(playerFish, opponentFish) {
         let newPlayerPoints = 0;
         let newOpponentPoints = 0;
