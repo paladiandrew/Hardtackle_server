@@ -852,9 +852,6 @@ app.post("/api/update_player_score", (req, res) => {
                     const prevOpponentFishCount =
                         opponentCircle.playerGame.fishCount || 0;
 
-                    // Обновляем fishCount оппонента в его кругах
-                    opponentCircle.playerGame.fishCount = new_score;
-
                     const {
                         newPlayerPoints: opNewPlayerPoints,
                         newOpponentPoints: opNewOpponentPoints,
