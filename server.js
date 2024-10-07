@@ -811,10 +811,12 @@ app.post("/api/update_player_score", (req, res) => {
 
         // Обновляем fishCount игрока
         circle.playerGame.fishCount = new_score;
+        totalFishDifference += new_score - prevFishCount;
 
-        const opponentFishCount = circle.opponentGame.fishCount || 0;
+        if (!isSecondCircle && circle.status === "completed") {
+            // Пересчитываем очки только если это не second_circle и статус completed
+            const opponentFishCount = circle.opponentGame.fishCount || 0;
 
-        if (circle.status === "completed") {
             const { newPlayerPoints, newOpponentPoints } = calculatePoints(
                 new_score,
                 opponentFishCount
@@ -824,29 +826,32 @@ app.post("/api/update_player_score", (req, res) => {
 
             circle.playerGame.points = newPlayerPoints;
             circle.opponentGame.points = newOpponentPoints;
+        }
 
-            totalFishDifference += new_score - prevFishCount;
+        // Обновляем оппонента
+        const opponentPlayerNumber = circle.opponentGame.number;
+        const opponentIndex = users.findIndex(
+            (u) => u.player_id === opponentPlayerNumber
+        );
+        if (opponentIndex !== -1) {
+            const opponentUser = users[opponentIndex];
 
-            // Обновляем оппонента
-            const opponentPlayerNumber = circle.opponentGame.number;
-            const opponentIndex = users.findIndex(
-                (u) => u.player_id === opponentPlayerNumber
+            const opponentCircles = opponentUser.circles.filter(
+                (c) =>
+                    c.index_circle === stage_number &&
+                    c.opponentGame.number === player_number
             );
-            if (opponentIndex !== -1) {
-                const opponentUser = users[opponentIndex];
 
-                const opponentCircles = opponentUser.circles.filter(
-                    (c) =>
-                        c.index_circle === stage_number &&
-                        c.opponentGame.number === player_number
-                );
+            opponentCircles.forEach((opponentCircle) => {
+                const isOpponentSecondCircle = opponentCircle.second_circle;
 
-                opponentCircles.forEach((opponentCircle) => {
-                    // **Обновляем opponentGame.fishCount для круга оппонента**
-                    opponentCircle.opponentGame.fishCount = new_score;
+                // Обновляем opponentGame.fishCount для оппонента
+                opponentCircle.opponentGame.fishCount = new_score;
 
-                    const isOpponentSecondCircle = opponentCircle.second_circle;
-
+                if (
+                    !isOpponentSecondCircle &&
+                    opponentCircle.status === "completed"
+                ) {
                     const prevOpponentPlayerPoints =
                         opponentCircle.playerGame.points || 0;
                     const prevOpponentFishCount =
@@ -860,29 +865,28 @@ app.post("/api/update_player_score", (req, res) => {
                         opponentCircle.opponentGame.fishCount
                     );
 
-                    if (!isOpponentSecondCircle) {
-                        opponentUser.total_user_points +=
-                            opNewPlayerPoints - prevOpponentPlayerPoints;
-                        opponentUser.total_user_fish +=
-                            opponentCircle.playerGame.fishCount -
-                            prevOpponentFishCount;
-                    }
+                    opponentUser.total_user_points +=
+                        opNewPlayerPoints - prevOpponentPlayerPoints;
+                    opponentUser.total_user_fish +=
+                        opponentCircle.playerGame.fishCount -
+                        prevOpponentFishCount;
+
                     opponentCircle.playerGame.points = opNewPlayerPoints;
-                    opponentCircle.opponentGame.points = newPlayerPoints;
+                    opponentCircle.opponentGame.points = opNewOpponentPoints;
+
                     updateUserTotalPointsInCircles(opponentUser);
-                });
-            }
-        } else {
-            totalFishDifference += new_score - prevFishCount;
+                }
+            });
         }
     });
 
     // Обновляем общие очки и рыбу пользователя
     user.total_user_points += totalPointsDifference;
     user.total_user_fish += totalFishDifference;
+
     updateUserTotalPointsInCircles(user);
 
-    // **Обновляем opponentGame.fishCount у всех оппонентов вне зависимости от статуса круга**
+    // Обновляем fishCount оппонентов независимо от статуса круга
     updateOpponentsFishCount(stage_number, player_number, new_score);
 
     function calculatePoints(playerFish, opponentFish) {
@@ -907,21 +911,18 @@ app.post("/api/update_player_score", (req, res) => {
     }
 
     function updateUserTotalPointsInCircles(updatedUser) {
-        const updatedPlayerNumber = updatedUser.player_id;
         const updatedPlayerTotalPoints = updatedUser.total_user_points;
 
         updatedUser.circles.forEach((circle) => {
-            if (circle.playerGame.number === updatedPlayerNumber) {
+            if (circle.playerGame.number === updatedUser.player_id) {
                 circle.playerGame.total_points = updatedPlayerTotalPoints;
             }
-            if (circle.opponentGame.number === updatedPlayerNumber) {
-                circle.opponentGame.total_points =
-                    updatedUser.total_user_points;
+            if (circle.opponentGame.number === updatedUser.player_id) {
+                circle.opponentGame.total_points = updatedPlayerTotalPoints;
             }
         });
     }
 
-    // **Новая функция для обновления opponentGame.fishCount у всех оппонентов**
     function updateOpponentsFishCount(stage_number, player_number, new_score) {
         users.forEach((user) => {
             user.circles.forEach((circle) => {
@@ -929,22 +930,14 @@ app.post("/api/update_player_score", (req, res) => {
                     circle.index_circle === stage_number &&
                     circle.opponentGame.number === player_number
                 ) {
-                    // Обновляем opponentGame.fishCount только
+                    // Обновляем opponentGame.fishCount
                     circle.opponentGame.fishCount = new_score;
-
-                    // Дополнительно, если необходимо, можно обновить и другие поля, например points
-                    // Например:
-                    // const { newPlayerPoints, newOpponentPoints } = calculatePoints(
-                    //     circle.playerGame.fishCount,
-                    //     new_score
-                    // );
-                    // circle.opponentGame.points = newOpponentPoints;
                 }
             });
         });
     }
 
-    // Отправляем обновлённые пользователи всем клиентам через WebSocket
+    // Отправляем обновлённые данные всем клиентам через WebSocket
     io.emit("allUsersUpdated", users);
 
     res.sendStatus(200);
